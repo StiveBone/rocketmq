@@ -31,6 +31,9 @@ import org.apache.rocketmq.remoting.exception.RemotingCommandException;
 import org.apache.rocketmq.logging.InternalLogger;
 import org.apache.rocketmq.logging.InternalLoggerFactory;
 
+/**
+ * 命令 MQ内部消息发送的命令
+ */
 public class RemotingCommand {
     public static final String SERIALIZE_TYPE_PROPERTY = "rocketmq.serialize.type";
     public static final String SERIALIZE_TYPE_ENV = "ROCKETMQ_SERIALIZE_TYPE";
@@ -69,22 +72,50 @@ public class RemotingCommand {
         }
     }
 
+    /**
+     * 命令码
+     */
     private int code;
+    /**
+     * 请求语言
+     */
     private LanguageCode language = LanguageCode.JAVA;
     private int version = 0;
+    /**
+     * 请求序号
+     */
     private int opaque = requestId.getAndIncrement();
     private int flag = 0;
     private String remark;
+    /**
+     * 扩展字段
+     */
     private HashMap<String, String> extFields;
+    /**
+     * 请求头
+     */
     private transient CommandCustomHeader customHeader;
 
+    /**
+     * 序列化方式
+     */
     private SerializeType serializeTypeCurrentRPC = serializeTypeConfigInThisServer;
 
+    /**
+     * 请求体
+     */
     private transient byte[] body;
 
     protected RemotingCommand() {
     }
 
+    /**
+     * 生成请求命令
+     *
+     * @param code         请求码
+     * @param customHeader 请求头
+     * @return 请求命令
+     */
     public static RemotingCommand createRequestCommand(int code, CommandCustomHeader customHeader) {
         RemotingCommand cmd = new RemotingCommand();
         cmd.setCode(code);
@@ -231,6 +262,13 @@ public class RemotingCommand {
         this.customHeader = customHeader;
     }
 
+    /**
+     * 反序列化头部信息
+     *
+     * @param classHeader
+     * @return
+     * @throws RemotingCommandException
+     */
     public CommandCustomHeader decodeCommandCustomHeader(
         Class<? extends CommandCustomHeader> classHeader) throws RemotingCommandException {
         CommandCustomHeader objectHeader;

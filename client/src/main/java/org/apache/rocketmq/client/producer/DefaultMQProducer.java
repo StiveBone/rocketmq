@@ -69,6 +69,8 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
     protected final transient DefaultMQProducerImpl defaultMQProducerImpl;
 
     /**
+     * 组名
+     *
      * Producer group conceptually aggregates all producer instances of exactly same role, which is particularly
      * important when transactional messages are involved.
      * </p>
@@ -86,21 +88,29 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
     private String createTopicKey = MixAll.AUTO_CREATE_TOPIC_KEY_TOPIC;
 
     /**
+     * 队列数量
+     *
      * Number of queues to create per default topic.
      */
     private volatile int defaultTopicQueueNums = 4;
 
     /**
+     * 超时时间
+     *
      * Timeout for sending messages.
      */
     private int sendMsgTimeout = 3000;
 
     /**
+     * 开启压缩阈值
+     *
      * Compress message body threshold, namely, message body larger than 4k will be compressed on default.
      */
     private int compressMsgBodyOverHowmuch = 1024 * 4;
 
     /**
+     * 失败重试次数
+     *
      * Maximum number of retry to perform internally before claiming sending failure in synchronous mode.
      * </p>
      *
@@ -109,6 +119,8 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
     private int retryTimesWhenSendFailed = 2;
 
     /**
+     * 异步失败重试次数
+     *
      * Maximum number of retry to perform internally before claiming sending failure in asynchronous mode.
      * </p>
      *
@@ -122,6 +134,8 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
     private boolean retryAnotherBrokerWhenNotStoreOK = false;
 
     /**
+     * 最大消息提
+     *
      * Maximum allowed message size in bytes.
      */
     private int maxMessageSize = 1024 * 1024 * 4; // 4M

@@ -29,21 +29,43 @@ import org.apache.rocketmq.common.constant.LoggerName;
 import org.apache.rocketmq.logging.InternalLogger;
 import org.apache.rocketmq.logging.InternalLoggerFactory;
 
+/**
+ * 映射文件队列
+ */
 public class MappedFileQueue {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
     private static final InternalLogger LOG_ERROR = InternalLoggerFactory.getLogger(LoggerName.STORE_ERROR_LOGGER_NAME);
 
     private static final int DELETE_FILES_BATCH_MAX = 10;
 
+    /**
+     * 存储目录
+     */
     private final String storePath;
 
+    /**
+     * 单个文件大小
+     */
     private final int mappedFileSize;
 
+    /**
+     * 文件集合
+     */
     private final CopyOnWriteArrayList<MappedFile> mappedFiles = new CopyOnWriteArrayList<MappedFile>();
 
+    /**
+     * 创建MappedFile服务类
+     */
     private final AllocateMappedFileService allocateMappedFileService;
 
+    /**
+     * 刷盘指针，当前指针指向的地方全部持久化到磁盘
+     */
     private long flushedWhere = 0;
+
+    /**
+     * ByteBuffer写入的指针 >= flushedWhere
+     */
     private long committedWhere = 0;
 
     private volatile long storeTimestamp = 0;
@@ -74,6 +96,14 @@ public class MappedFileQueue {
         }
     }
 
+    /**
+     * 按时间查找MappedFiled
+     *
+     * 根据时间维度来查询MappedFile ，利用文件的最后修改时间了来定位到指定的文件，因为消息都是按顺序写入的，找不到返回最后一个
+     *
+     * @param timestamp
+     * @return
+     */
     public MappedFile getMappedFileByTime(final long timestamp) {
         Object[] mfs = this.copyMappedFiles(0);
 
@@ -191,6 +221,15 @@ public class MappedFileQueue {
         return 0;
     }
 
+    /**
+     * 按物理偏移量来查询MappedFile 找不到就创建
+     *
+     * 因为文件大小固定，取模即可定位文件
+     *
+     * @param startOffset
+     * @param needCreate
+     * @return
+     */
     public MappedFile getLastMappedFile(final long startOffset, boolean needCreate) {
         long createOffset = -1;
         MappedFile mappedFileLast = getLastMappedFile();
@@ -237,6 +276,11 @@ public class MappedFileQueue {
         return getLastMappedFile(startOffset, true);
     }
 
+    /**
+     * 获取最新的MappedFile
+     *
+     * @return
+     */
     public MappedFile getLastMappedFile() {
         MappedFile mappedFileLast = null;
 
@@ -453,6 +497,8 @@ public class MappedFileQueue {
     }
 
     /**
+     * 利用物理偏移量定位MappedFile
+     *
      * Finds a mapped file by offset.
      *
      * @param offset Offset.

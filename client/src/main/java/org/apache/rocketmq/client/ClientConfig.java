@@ -32,6 +32,8 @@ public class ClientConfig {
     private String instanceName = System.getProperty("rocketmq.client.name", "DEFAULT");
     private int clientCallbackExecutorThreads = Runtime.getRuntime().availableProcessors();
     /**
+     * 没30s拉取一次路由信息
+     *
      * Pulling topic information interval from the named server
      */
     private int pollNameServerInterval = 1000 * 30;

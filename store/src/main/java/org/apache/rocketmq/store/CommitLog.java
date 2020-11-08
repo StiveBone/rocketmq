@@ -366,6 +366,14 @@ public class CommitLog {
         return new DispatchRequest(-1, false /* success */);
     }
 
+    /**
+     * 计算消息总长度
+     *
+     * @param bodyLength 消息体长度
+     * @param topicLength topic长度
+     * @param propertiesLength 属性长度
+     * @return
+     */
     private static int calMsgLength(int bodyLength, int topicLength, int propertiesLength) {
         final int msgLen = 4 //TOTALSIZE
             + 4 //MAGICCODE
@@ -525,6 +533,12 @@ public class CommitLog {
         return beginTimeInLock;
     }
 
+    /**
+     * putMessage
+     *
+     * @param msg
+     * @return
+     */
     public PutMessageResult putMessage(final MessageExtBrokerInner msg) {
         // Set the storage time
         msg.setStoreTimestamp(System.currentTimeMillis());
@@ -565,6 +579,9 @@ public class CommitLog {
         MappedFile unlockMappedFile = null;
         MappedFile mappedFile = this.mappedFileQueue.getLastMappedFile();
 
+        /**
+         * 串行写入CommitLog
+         */
         putMessageLock.lock(); //spin or ReentrantLock ,depending on store config
         try {
             long beginLockTimestamp = this.defaultMessageStore.getSystemClock().now();
@@ -583,6 +600,9 @@ public class CommitLog {
                 return new PutMessageResult(PutMessageStatus.CREATE_MAPEDFILE_FAILED, null);
             }
 
+            /**
+             * 消息写入
+             */
             result = mappedFile.appendMessage(msg, this.appendMessageCallback);
             switch (result.getStatus()) {
                 case PUT_OK:
@@ -631,7 +651,13 @@ public class CommitLog {
         storeStatsService.getSinglePutMessageTopicTimesTotal(msg.getTopic()).incrementAndGet();
         storeStatsService.getSinglePutMessageTopicSizeTotal(topic).addAndGet(result.getWroteBytes());
 
+        /**
+         * 刷盘
+         */
         handleDiskFlush(result, putMessageResult, msg);
+        /**
+         * 主从复制
+         */
         handleHA(result, putMessageResult, msg);
 
         return putMessageResult;
@@ -1187,12 +1213,18 @@ public class CommitLog {
             final MessageExtBrokerInner msgInner) {
             // STORETIMESTAMP + STOREHOSTADDRESS + OFFSET <br>
 
+            /**
+             * 物理偏移量=文件起始偏移量+逻辑偏移量
+             */
             // PHY OFFSET
             long wroteOffset = fileFromOffset + byteBuffer.position();
 
             this.resetByteBuffer(hostHolder, 8);
             String msgId = MessageDecoder.createMessageId(this.msgIdMemory, msgInner.getStoreHostBytes(hostHolder), wroteOffset);
 
+            /**
+             * 获取消息在消息队列的偏移量
+             */
             // Record ConsumeQueue information
             keyBuilder.setLength(0);
             keyBuilder.append(msgInner.getTopic());
@@ -1321,6 +1353,9 @@ public class CommitLog {
                 case MessageSysFlag.TRANSACTION_NOT_TYPE:
                 case MessageSysFlag.TRANSACTION_COMMIT_TYPE:
                     // The next update ConsumeQueue information
+                    /**
+                     * 更新消息队列逻辑偏移量
+                     */
                     CommitLog.this.topicQueueTable.put(key, ++queueOffset);
                     break;
                 default:

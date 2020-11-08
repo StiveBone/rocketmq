@@ -30,10 +30,11 @@ public class AppendMessageResult {
     private String msgId;
     // Message storage timestamp
     private long storeTimestamp;
-    // Consume queue's offset(step by one)
+    // Consume queue's offset(step by one) 类似数组下标
     private long logicsOffset;
     private long pagecacheRT = 0;
 
+    // 消息条数 批量消息时使用
     private int msgNum = 1;
 
     public AppendMessageResult(AppendMessageStatus status) {
