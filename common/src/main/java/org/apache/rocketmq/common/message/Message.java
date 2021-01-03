@@ -22,12 +22,27 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
+/***
+ * 消息的定义
+ */
 public class Message implements Serializable {
     private static final long serialVersionUID = 8445773977080406428L;
 
+    /**
+     * 消息发送的主题
+     */
     private String topic;
+    /**
+     * 目前没用
+     */
     private int flag;
+    /**
+     * 消息扩展信息Tag/Keys/延迟级别都保存在这里
+     */
     private Map<String, String> properties;
+    /**
+     * 消息体的字节数组，生产者使用什么类型的编码，消费者需要使用相同的编码解码否则会乱码
+     */
     private byte[] body;
     private String transactionId;
 
@@ -60,6 +75,12 @@ public class Message implements Serializable {
         this(topic, tags, keys, 0, body, true);
     }
 
+    /**
+     * 设置keys，多个key使用{@link MessageConst.KEY_SEPARATOR}分开
+     * 如果在Broker中的messageIndexEnable=true，则会根据key创建消息的Hash索引
+     *
+     * @param keys keys
+     */
     public void setKeys(String keys) {
         this.putProperty(MessageConst.PROPERTY_KEYS, keys);
     }
@@ -78,6 +99,12 @@ public class Message implements Serializable {
         }
     }
 
+    /**
+     * 如果还有其他扩展信息可以存放这里
+     *
+     * @param name
+     * @param value
+     */
     public void putUserProperty(final String name, final String value) {
         if (MessageConst.STRING_HASH_SET.contains(name)) {
             throw new RuntimeException(String.format(
@@ -118,6 +145,11 @@ public class Message implements Serializable {
         return this.getProperty(MessageConst.PROPERTY_TAGS);
     }
 
+    /**
+     * 设置消息的过滤标签。用于用户订阅某个Topic的某些Tag,这样Brocker会把订阅了Topic-Tag的消息发送给消费者
+     *
+     * @param tags 标签
+     */
     public void setTags(String tags) {
         this.putProperty(MessageConst.PROPERTY_TAGS, tags);
     }
@@ -145,6 +177,11 @@ public class Message implements Serializable {
         return 0;
     }
 
+    /**
+     * 设置消息的延迟级别，延迟多久消费者可以消费
+     *
+     * @param level int
+     */
     public void setDelayTimeLevel(int level) {
         this.putProperty(MessageConst.PROPERTY_DELAY_TIME_LEVEL, String.valueOf(level));
     }

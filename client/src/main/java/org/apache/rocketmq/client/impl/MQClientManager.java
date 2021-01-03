@@ -48,9 +48,20 @@ public class MQClientManager {
     }
 
     public MQClientInstance getAndCreateMQClientInstance(final ClientConfig clientConfig, RPCHook rpcHook) {
+        /**
+         * 生成客户端ID
+         * 消费端默认 IP@进程号(或配置的instanceName)@unitName
+         * 生产端默认 IP@DEFAULT(或配置的instanceName)@unitName
+         */
         String clientId = clientConfig.buildMQClientId();
         MQClientInstance instance = this.factoryTable.get(clientId);
+        /**
+         * 如果已创建则不再创建，通常与同个Brocker只虚一个客户端实例
+         */
         if (null == instance) {
+            /**
+             * 创建客户端
+             */
             instance =
                 new MQClientInstance(clientConfig.cloneClientConfig(),
                     this.factoryIndexGenerator.getAndIncrement(), clientId, rpcHook);

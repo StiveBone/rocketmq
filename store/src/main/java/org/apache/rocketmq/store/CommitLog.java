@@ -1253,6 +1253,8 @@ public class CommitLog {
             }
 
             /**
+             * 序列化消息
+             *
              * Serialize message
              */
             final byte[] propertiesData =

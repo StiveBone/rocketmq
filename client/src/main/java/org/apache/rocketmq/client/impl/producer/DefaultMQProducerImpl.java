@@ -100,11 +100,19 @@ public class DefaultMQProducerImpl implements MQProducerInner {
     private final RPCHook rpcHook;
     protected BlockingQueue<Runnable> checkRequestQueue;
     protected ExecutorService checkExecutor;
+    /**
+     * 客户端状态
+     */
     private ServiceState serviceState = ServiceState.CREATE_JUST;
+    /**
+     * MQ客户端实例
+     */
     private MQClientInstance mQClientFactory;
     private ArrayList<CheckForbiddenHook> checkForbiddenHookList = new ArrayList<CheckForbiddenHook>();
     private int zipCompressLevel = Integer.parseInt(System.getProperty(MixAll.MESSAGE_COMPRESS_LEVEL, "5"));
-
+    /**
+     * 容错策略
+     */
     private MQFaultStrategy mqFaultStrategy = new MQFaultStrategy();
 
     private final BlockingQueue<Runnable> asyncSenderThreadPoolQueue;
@@ -176,21 +184,20 @@ public class DefaultMQProducerImpl implements MQProducerInner {
         switch (this.serviceState) {
             case CREATE_JUST:
                 this.serviceState = ServiceState.START_FAILED;
-
+                /**
+                 * 检查配置
+                 */
                 this.checkConfig();
-
                 /**
                  * 默认instanceName使用进程ID
                  */
                 if (!this.defaultMQProducer.getProducerGroup().equals(MixAll.CLIENT_INNER_PRODUCER_GROUP)) {
                     this.defaultMQProducer.changeInstanceNameToPID(); //进程ID
                 }
-
                 /**
                  * 创建ClientInstance
                  */
                 this.mQClientFactory = MQClientManager.getInstance().getAndCreateMQClientInstance(this.defaultMQProducer, rpcHook);
-
                 /**
                  * 将当前生产者放入集合中
                  */
@@ -201,7 +208,6 @@ public class DefaultMQProducerImpl implements MQProducerInner {
                             + "] has been created before, specify another name please." + FAQUrl.suggestTodo(FAQUrl.GROUP_NAME_DUPLICATE_URL),
                             null);
                 }
-
                 /***
                  * 路由信息
                  */
@@ -748,7 +754,7 @@ public class DefaultMQProducerImpl implements MQProducerInner {
      *
      * @param msg               消息
      * @param mq                队列
-     * @param communicationMode 模式
+     * @param communicationMode 通信模式
      * @param sendCallback      回调
      * @param topicPublishInfo  路由信息
      * @param timeout           超时时间

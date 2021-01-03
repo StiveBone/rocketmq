@@ -75,20 +75,38 @@ public class MQFaultStrategy {
          */
         if (this.sendLatencyFaultEnable) {
             try {
+                /**
+                 * 序列号自增
+                 */
                 int index = tpInfo.getSendWhichQueue().getAndIncrement();
                 for (int i = 0; i < tpInfo.getMessageQueueList().size(); i++) {
+                    /**
+                     * 获取该序列号对应的下标
+                     */
                     int pos = Math.abs(index++) % tpInfo.getMessageQueueList().size();
                     if (pos < 0)
                         pos = 0;
+                    /**
+                     * 获取下标对应的队列Queue
+                     */
                     MessageQueue mq = tpInfo.getMessageQueueList().get(pos);
+                    /**
+                     * 如果brocker可用，且是上次使用Brocker则该Brocker这只为候选的Brocker
+                     */
                     if (latencyFaultTolerance.isAvailable(mq.getBrokerName())) {
                         if (null == lastBrokerName || mq.getBrokerName().equals(lastBrokerName))
                             return mq;
                     }
                 }
 
+                /**
+                 * 选择一个延迟最小的Brocker
+                 */
                 final String notBestBroker = latencyFaultTolerance.pickOneAtLeast();
                 int writeQueueNums = tpInfo.getQueueIdByBroker(notBestBroker);
+                /**
+                 * 如果队列不为空则选择该Brocker
+                 */
                 if (writeQueueNums > 0) {
                     final MessageQueue mq = tpInfo.selectOneMessageQueue();
                     if (notBestBroker != null) {
@@ -103,9 +121,15 @@ public class MQFaultStrategy {
                 log.error("Error occurred when selecting message queue", e);
             }
 
+            /**
+             * 随机选择一个Brocker
+             */
             return tpInfo.selectOneMessageQueue();
         }
 
+        /**
+         * 以前一次为参照随机选择Brocker
+         */
         return tpInfo.selectOneMessageQueue(lastBrokerName);
     }
 

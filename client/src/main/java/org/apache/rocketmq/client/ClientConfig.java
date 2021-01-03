@@ -23,36 +23,60 @@ import org.apache.rocketmq.remoting.netty.TlsSystemConfig;
 import org.apache.rocketmq.remoting.protocol.LanguageCode;
 
 /**
+ * 客户端通用配置
+ *
  * Client Common configuration
  */
 public class ClientConfig {
     public static final String SEND_MESSAGE_WITH_VIP_CHANNEL_PROPERTY = "com.rocketmq.sendMessageWithVIPChannel";
+    /**
+     * nameserv地址
+     */
     private String namesrvAddr = System.getProperty(MixAll.NAMESRV_ADDR_PROPERTY, System.getenv(MixAll.NAMESRV_ADDR_ENV));
+    /**
+     * 客户端IP地址 如果是在Docker容器中则时容器的IP
+     */
     private String clientIP = RemotingUtil.getLocalAddress();
+    /**
+     * 实例名，每个实例都需要唯一的名字
+     */
     private String instanceName = System.getProperty("rocketmq.client.name", "DEFAULT");
+    /**
+     * 客户端回调线程数，该参数表示Netty通信层回调线程的个数。
+     */
     private int clientCallbackExecutorThreads = Runtime.getRuntime().availableProcessors();
     /**
-     * 没30s拉取一次路由信息
-     *
+     * 获取Topic路由信息的事件间隔单位毫秒
      * Pulling topic information interval from the named server
      */
     private int pollNameServerInterval = 1000 * 30;
     /**
+     * 与Brocker的心跳间隔单位毫秒
      * Heartbeat interval in microseconds with message broker
      */
     private int heartbeatBrokerInterval = 1000 * 30;
     /**
+     * 消费持久化间隔
      * Offset persistent interval for consumer
      */
     private int persistConsumerOffsetInterval = 1000 * 5;
     private boolean unitMode = false;
     private String unitName;
+    /**
+     * 是否开启VIP通道，VIP通道和非VIP通道的区别是，在通信过程中使用的端口号不同
+     */
     private boolean vipChannelEnabled = Boolean.parseBoolean(System.getProperty(SEND_MESSAGE_WITH_VIP_CHANNEL_PROPERTY, "true"));
 
     private boolean useTLS = TlsSystemConfig.tlsEnable;
 
     private LanguageCode language = LanguageCode.JAVA;
 
+    /**
+     * 生成ClientId
+     * IP@instatcenName
+     *
+     * @return
+     */
     public String buildMQClientId() {
         StringBuilder sb = new StringBuilder();
         sb.append(this.getClientIP());
