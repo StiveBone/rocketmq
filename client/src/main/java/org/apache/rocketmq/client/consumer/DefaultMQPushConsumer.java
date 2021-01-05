@@ -45,6 +45,8 @@ import org.apache.rocketmq.remoting.RPCHook;
 import org.apache.rocketmq.remoting.exception.RemotingException;
 
 /**
+ * 消息推送模式
+ *
  * In most scenarios, this is the mostly recommended class to consume messages.
  * </p>
  *
@@ -64,11 +66,13 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
     private final InternalLogger log = ClientLogger.getLog();
 
     /**
+     * 默认的消息推送具体实现类
      * Internal implementation. Most of the functions herein are delegated to it.
      */
     protected final transient DefaultMQPushConsumerImpl defaultMQPushConsumerImpl;
 
     /**
+     * 消费者组名
      * Consumers of the same role is required to have exactly same subscriptions and consumerGroup to correctly achieve
      * load balance. It's required and needs to be globally unique.
      * </p>
@@ -78,6 +82,7 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
     private String consumerGroup;
 
     /**
+     * 消费模式 集群or广播
      * Message model defines the way how messages are delivered to each consumer clients.
      * </p>
      *
@@ -92,6 +97,14 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
     private MessageModel messageModel = MessageModel.CLUSTERING;
 
     /**
+     * 开始消费位点：
+     * CONSUME_FROM_LAST_OFFSET：从上次消费的位点继续消费，相当于断点继续
+     * CONSUME_FROM_LAST_OFFSET_AND_FROM_MIN_WHEN_BOOT_FIRST：4.2.0不支持，处理同CONSUME_FROM_LAST_OFFSET
+     * CONSUME_FROM_MIN_OFFSET：4.2.0不支持，处理同CONSUME_FROM_LAST_OFFSET
+     * CONSUME_FROM_MAX_OFFSET：4.2.0不支持，处理同CONSUME_FROM_LAST_OFFSET
+     * CONSUME_FROM_FIRST_OFFSET：从ConsumerQueue的最小位点开始消费
+     * CONSUME_FROM_TIMESTAMP：从执行时间点开始消费
+     *
      * Consuming point on consumer booting.
      * </p>
      *
@@ -125,6 +138,7 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
     private ConsumeFromWhere consumeFromWhere = ConsumeFromWhere.CONSUME_FROM_LAST_OFFSET;
 
     /**
+     * 表示从那一时刻开始消费，默认为半小时之前。只有consumeFromWhere为CONSUME_FROM_TIMESTAMP时该值才生效
      * Backtracking consumption time with second precision. Time format is
      * 20131223171201<br>
      * Implying Seventeen twelve and 01 seconds on December 23, 2013 year<br>
@@ -133,52 +147,62 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
     private String consumeTimestamp = UtilAll.timeMillisToHumanString3(System.currentTimeMillis() - (1000 * 60 * 30));
 
     /**
+     * 消费订阅Topic-Queue的算法
      * Queue allocation algorithm specifying how message queues are allocated to each consumer clients.
      */
     private AllocateMessageQueueStrategy allocateMessageQueueStrategy;
 
     /**
+     * 订阅关系，表明当前消费者订阅了那些Topic的那些Tag
      * Subscription relationship
      */
     private Map<String /* topic */, String /* sub expression */> subscription = new HashMap<String, String>();
 
     /**
+     * 消息Push回调监听
      * Message listener
      */
     private MessageListener messageListener;
 
     /**
+     * 消费位点持久化方式
      * Offset Storage
      */
     private OffsetStore offsetStore;
 
     /**
+     * 最小消费线程数
      * Minimum consumer thread number
      */
     private int consumeThreadMin = 20;
 
     /**
+     * 最大消费线程数
      * Max consumer thread number
      */
     private int consumeThreadMax = 64;
 
     /**
+     * 动态调整消费线程池的消费线程数
      * Threshold for dynamic adjustment of the number of thread pool
      */
     private long adjustThreadPoolNumsThreshold = 100000;
 
     /**
+     * 并发消息的最大位点差，如果Pull消息的位点差超过该值，拉取变慢
      * Concurrently max span offset.it has no effect on sequential consumption
      */
     private int consumeConcurrentlyMaxSpan = 2000;
 
     /**
+     * 一个Queue能缓存的最大消息数，超过该值采取流控措施
      * Flow control threshold on queue level, each message queue will cache at most 1000 messages by default,
      * Consider the {@code pullBatchSize}, the instantaneous value may exceed the limit
      */
     private int pullThresholdForQueue = 1000;
 
     /**
+     * 一个Queue最大能够缓存的消息字节数，单位时MB
      * Limit the cached message size on queue level, each message queue will cache at most 100 MiB messages by default,
      * Consider the {@code pullBatchSize}, the instantaneous value may exceed the limit
      *
@@ -188,6 +212,9 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
     private int pullThresholdSizeForQueue = 100;
 
     /**
+     * 一个Topic能缓存的最大消息数，超过该值采取流控措施，该字段默认值为-1
+     * ，该值根据pullThresholdForQueue的配置决定是否生效，pullThresholdForTopic
+     * 优先级低于pullThresholdForQueue
      * Flow control threshold on topic level, default value is -1(Unlimited)
      * <p>
      * The value of {@code pullThresholdForQueue} will be overwrote and calculated based on
@@ -199,6 +226,8 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
     private int pullThresholdForTopic = -1;
 
     /**
+     * 一个Topic最大能缓存的消息字节数，单位时MB,默认为-1，结合pullThresholdSizeForQueue配置项生效
+     * 该配置的优先级低于pullThresholdSizeForQueue
      * Limit the cached message size on topic level, default value is -1 MiB(Unlimited)
      * <p>
      * The value of {@code pullThresholdSizeForQueue} will be overwrote and calculated based on
@@ -210,11 +239,13 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
     private int pullThresholdSizeForTopic = -1;
 
     /**
+     * 拉取间隔
      * Message pull Interval
      */
     private long pullInterval = 0;
 
     /**
+     *
      * Batch consumption size
      */
     private int consumeMessageBatchMaxSize = 1;
@@ -225,6 +256,7 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
     private int pullBatchSize = 32;
 
     /**
+     * 每次拉取消息时是否更新
      * Whether update subscription relationship when every pull
      */
     private boolean postSubscriptionWhenPull = false;
@@ -235,6 +267,7 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
     private boolean unitMode = false;
 
     /**
+     * 最大重试次数，默认为-1表示最大重试16次
      * Max re-consume times. -1 means 16 times.
      * </p>
      *
@@ -244,16 +277,19 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
     private int maxReconsumeTimes = -1;
 
     /**
+     * 为轮训场景设置的挂起时间，比如顺序消息场景
      * Suspending pulling time for cases requiring slow pulling like flow-control scenario.
      */
     private long suspendCurrentQueueTimeMillis = 1000;
 
     /**
+     * 消费超时时间单位min默认15分钟
      * Maximum amount of time in minutes a message may block the consuming thread.
      */
     private long consumeTimeout = 15;
 
     /**
+     *
      * Interface of asynchronous transfer data
      */
     private TraceDispatcher traceDispatcher = null;
