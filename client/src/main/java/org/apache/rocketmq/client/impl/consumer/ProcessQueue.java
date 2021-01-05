@@ -35,6 +35,8 @@ import org.apache.rocketmq.common.message.MessageExt;
 import org.apache.rocketmq.common.protocol.body.ProcessQueueInfo;
 
 /**
+ * 保存Pull消息的本地容器
+ *
  * Queue consumption snapshot
  */
 public class ProcessQueue {

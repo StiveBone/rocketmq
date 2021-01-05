@@ -41,18 +41,48 @@ import org.apache.rocketmq.common.protocol.heartbeat.MessageModel;
 import org.apache.rocketmq.common.protocol.heartbeat.SubscriptionData;
 
 /**
+ * 消息的重平衡
+ * 消费端是通过rebalance服务实现高可用的。
+ * 当发生Broker掉线、消费者实例掉线、Topic扩容等突发情况时消费者组中的消费者实例通过
+ * rebalance实现全部队列的正常消费
+ *
  * Base class for rebalance algorithm
  */
 public abstract class RebalanceImpl {
     protected static final InternalLogger log = ClientLogger.getLog();
+    /**
+     * 记录MessageQueue和ProcessQueue的关系
+     * MessageQueue理解为ConsumeQueue的客户端实现
+     * ProcessQueue是保存Pull消息的本地容器
+     */
     protected final ConcurrentMap<MessageQueue, ProcessQueue> processQueueTable = new ConcurrentHashMap<MessageQueue, ProcessQueue>(64);
+    /**
+     * Topic理由信息。保存Topic和MessageQueue的关系
+     */
     protected final ConcurrentMap<String/* topic */, Set<MessageQueue>> topicSubscribeInfoTable =
         new ConcurrentHashMap<String, Set<MessageQueue>>();
+    /**
+     * 真正的订阅关系，保存当前消费者组订阅了那些Topic那些Tag
+     * 数据来自于客户端启动是的配置数据
+     * {@link DefaultMQPushConsumerImpl#copySubscription()}/{@link DefaultMQPullConsumerImpl#copySubscription()}
+     */
     protected final ConcurrentMap<String /* topic */, SubscriptionData> subscriptionInner =
         new ConcurrentHashMap<String, SubscriptionData>();
+    /**
+     * 消费者组名，在启动时设置
+     */
     protected String consumerGroup;
+    /**
+     * 消费模式，在启动时设置
+     */
     protected MessageModel messageModel;
+    /**
+     * MessageQueue消息分配策略的实现
+     */
     protected AllocateMessageQueueStrategy allocateMessageQueueStrategy;
+    /**
+     * ClientInstance对象
+     */
     protected MQClientInstance mQClientFactory;
 
     public RebalanceImpl(String consumerGroup, MessageModel messageModel,
@@ -133,6 +163,10 @@ public abstract class RebalanceImpl {
         return result;
     }
 
+    /**
+     * 为MessageQueue加锁
+     * @param mq
+     */
     public boolean lock(final MessageQueue mq) {
         FindBrokerResult findBrokerResult = this.mQClientFactory.findBrokerAddressInSubscribe(mq.getBrokerName(), MixAll.MASTER_ID, true);
         if (findBrokerResult != null) {
@@ -216,6 +250,10 @@ public abstract class RebalanceImpl {
         }
     }
 
+    /**
+     * 执行rebalance操作
+     * @param isOrder
+     */
     public void doRebalance(final boolean isOrder) {
         Map<String, SubscriptionData> subTable = this.getSubscriptionInner();
         if (subTable != null) {
@@ -328,6 +366,13 @@ public abstract class RebalanceImpl {
         }
     }
 
+    /**
+     * 在rebalance中更新processQueue
+     * @param topic
+     * @param mqSet
+     * @param isOrder
+     * @return
+     */
     private boolean updateProcessQueueTableInRebalance(final String topic, final Set<MessageQueue> mqSet,
         final boolean isOrder) {
         boolean changed = false;
@@ -402,9 +447,21 @@ public abstract class RebalanceImpl {
         return changed;
     }
 
+    /**
+     * 通知Message发生变化，这个方法在Push和Pull两个类中被重写
+     * @param topic
+     * @param mqAll
+     * @param mqDivided
+     */
     public abstract void messageQueueChanged(final String topic, final Set<MessageQueue> mqAll,
         final Set<MessageQueue> mqDivided);
 
+    /**
+     * 去掉不需要的MessageQueue
+     * @param mq
+     * @param pq
+     * @return
+     */
     public abstract boolean removeUnnecessaryMessageQueue(final MessageQueue mq, final ProcessQueue pq);
 
     public abstract ConsumeType consumeType();
@@ -413,6 +470,10 @@ public abstract class RebalanceImpl {
 
     public abstract long computePullFromWhere(final MessageQueue mq);
 
+    /**
+     * 执行拉取请求
+     * @param pullRequestList
+     */
     public abstract void dispatchPullRequest(final List<PullRequest> pullRequestList);
 
     public void removeProcessQueue(final MessageQueue mq) {

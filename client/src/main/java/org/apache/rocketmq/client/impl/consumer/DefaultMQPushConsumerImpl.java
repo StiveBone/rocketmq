@@ -549,6 +549,10 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
         }
     }
 
+    /**
+     * push模式启动
+     * @throws MQClientException
+     */
     public synchronized void start() throws MQClientException {
         switch (this.serviceState) {
             case CREATE_JUST:
@@ -561,31 +565,55 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
                  */
                 this.checkConfig();
 
+                /**
+                 * 复制订阅关系
+                 */
                 this.copySubscription();
 
+                /**
+                 * 集群模式下，改变clientId为进程ID
+                 */
                 if (this.defaultMQPushConsumer.getMessageModel() == MessageModel.CLUSTERING) {
                     this.defaultMQPushConsumer.changeInstanceNameToPID();
                 }
 
+                /**
+                 * 创建QMClientInstance,如果当前clientId已经创建过则不再创建
+                 */
                 this.mQClientFactory = MQClientManager.getInstance().getAndCreateMQClientInstance(this.defaultMQPushConsumer, this.rpcHook);
 
+                /**
+                 * 设置rebalance服务 消费者组名，消费模式、queue分配策略，MQClientInstace等参数
+                 */
                 this.rebalanceImpl.setConsumerGroup(this.defaultMQPushConsumer.getConsumerGroup());
                 this.rebalanceImpl.setMessageModel(this.defaultMQPushConsumer.getMessageModel());
                 this.rebalanceImpl.setAllocateMessageQueueStrategy(this.defaultMQPushConsumer.getAllocateMessageQueueStrategy());
                 this.rebalanceImpl.setmQClientFactory(this.mQClientFactory);
 
+                /**
+                 * 对Broker类的封装类PullAPIWrapper进行初始化。并注册消息过滤filter
+                 */
                 this.pullAPIWrapper = new PullAPIWrapper(
                     mQClientFactory,
                     this.defaultMQPushConsumer.getConsumerGroup(), isUnitMode());
                 this.pullAPIWrapper.registerFilterMessageHook(filterMessageHookList);
 
+                /**
+                 * 设置消息点位持久化管理器
+                 */
                 if (this.defaultMQPushConsumer.getOffsetStore() != null) {
                     this.offsetStore = this.defaultMQPushConsumer.getOffsetStore();
                 } else {
                     switch (this.defaultMQPushConsumer.getMessageModel()) {
+                        /**
+                         * 广播模式消息点位本地持久化
+                         */
                         case BROADCASTING:
                             this.offsetStore = new LocalFileOffsetStore(this.mQClientFactory, this.defaultMQPushConsumer.getConsumerGroup());
                             break;
+                        /**
+                         * 集群模式Broker持久化
+                         */
                         case CLUSTERING:
                             this.offsetStore = new RemoteBrokerOffsetStore(this.mQClientFactory, this.defaultMQPushConsumer.getConsumerGroup());
                             break;
@@ -594,20 +622,41 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
                     }
                     this.defaultMQPushConsumer.setOffsetStore(this.offsetStore);
                 }
+                /**
+                 * 加载消费点位
+                 */
                 this.offsetStore.load();
 
+                /**
+                 * 初始化消费服务
+                 */
                 if (this.getMessageListenerInner() instanceof MessageListenerOrderly) {
+                    /**
+                     * 顺序消费
+                     */
                     this.consumeOrderly = true;
                     this.consumeMessageService =
                         new ConsumeMessageOrderlyService(this, (MessageListenerOrderly) this.getMessageListenerInner());
                 } else if (this.getMessageListenerInner() instanceof MessageListenerConcurrently) {
+                    /**
+                     * 并发消费
+                     */
                     this.consumeOrderly = false;
                     this.consumeMessageService =
                         new ConsumeMessageConcurrentlyService(this, (MessageListenerConcurrently) this.getMessageListenerInner());
                 }
 
+                /**
+                 * 启动消费服务
+                 * 之所以客户端代码感觉消息时BrokerPush到客户端的，实质是因为DefaultMQPushConsumer通过
+                 * pull将消息拉取到本地，再通过Callback的形式，将本地消息Push给客户端代码。
+                 * DefaultMQPushConsumer与DefaultMQPullConsumer本质是一样的都是拉取
+                 */
                 this.consumeMessageService.start();
 
+                /**
+                 * 注册本地消费者实例，如果注册成功则表名当前消费者启动成功
+                 */
                 boolean registerOK = mQClientFactory.registerConsumer(this.defaultMQPushConsumer.getConsumerGroup(), this);
                 if (!registerOK) {
                     this.serviceState = ServiceState.CREATE_JUST;
@@ -617,6 +666,9 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
                         null);
                 }
 
+                /**
+                 * 启动MQClientInstance
+                 */
                 mQClientFactory.start();
                 log.info("the consumer [{}] start OK.", this.defaultMQPushConsumer.getConsumerGroup());
                 this.serviceState = ServiceState.RUNNING;
@@ -632,9 +684,21 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
                 break;
         }
 
+        /**
+         * 更新本地订阅关系和路由关系，通过Broker检查是否支持消费者的过滤类型；向集群中的所有Broker发送消费者组心跳
+         */
         this.updateTopicSubscribeInfoWhenSubscriptionChanged();
+        /**
+         * 通过Broker检查是否支持消费者的过滤类型
+         */
         this.mQClientFactory.checkClientInBroker();
+        /**
+         * 向集群中的所有Broker发送心跳
+         */
         this.mQClientFactory.sendHeartbeatToAllBrokerWithLock();
+        /**
+         * 立即执行一次rebalance
+         */
         this.mQClientFactory.rebalanceImmediately();
     }
 
@@ -808,6 +872,11 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
         }
     }
 
+    /**
+     * 复制订阅关系
+     * 将配置的订阅关系复制到rebalance服务
+     * @throws MQClientException
+     */
     private void copySubscription() throws MQClientException {
         try {
             Map<String, String> sub = this.defaultMQPushConsumer.getSubscription();
@@ -817,6 +886,9 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
                     final String subString = entry.getValue();
                     SubscriptionData subscriptionData = FilterAPI.buildSubscriptionData(this.defaultMQPushConsumer.getConsumerGroup(),
                         topic, subString);
+                    /**
+                     * 将订阅关系发送给rebalance服务
+                     */
                     this.rebalanceImpl.getSubscriptionInner().put(topic, subscriptionData);
                 }
             }
@@ -828,6 +900,9 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
             switch (this.defaultMQPushConsumer.getMessageModel()) {
                 case BROADCASTING:
                     break;
+                /**
+                 * 集群模式将重试Topic订阅关系发送给rebalance服务
+                 */
                 case CLUSTERING:
                     final String retryTopic = MixAll.getRetryTopic(this.defaultMQPushConsumer.getConsumerGroup());
                     SubscriptionData subscriptionData = FilterAPI.buildSubscriptionData(this.defaultMQPushConsumer.getConsumerGroup(),

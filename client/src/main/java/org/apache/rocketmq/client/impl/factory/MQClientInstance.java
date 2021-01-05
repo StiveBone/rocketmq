@@ -506,7 +506,7 @@ public class MQClientInstance {
     }
 
     /**
-     * 检查Client是否在Brocker中有效
+     * 通过Broker检查是否支持消费者的过滤类型
      * @throws MQClientException
      */
     public void checkClientInBroker() throws MQClientException {
@@ -1105,6 +1105,8 @@ public class MQClientInstance {
 
     /**
      * 立即执行一次rebalance
+     * 通常是在实例刚刚启动或者Broker端检测到有消费者下线或者扩容等时机会执行该方法
+     * 对消费端执行一次重平衡
      */
     public void rebalanceImmediately() {
         this.rebalanceService.wakeup();
