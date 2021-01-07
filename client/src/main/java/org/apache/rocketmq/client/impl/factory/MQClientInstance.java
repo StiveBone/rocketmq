@@ -1116,6 +1116,9 @@ public class MQClientInstance {
      * 对所有已注册的消费者实例执行一次rebalance
      */
     public void doRebalance() {
+        /**
+         * 遍历当前ClientId所有所对应的所有消费者，全部执行一遍Rebalance
+         */
         for (Map.Entry<String, MQConsumerInner> entry : this.consumerTable.entrySet()) {
             MQConsumerInner impl = entry.getValue();
             if (impl != null) {
@@ -1247,6 +1250,8 @@ public class MQClientInstance {
 
     /**
      * 查找消费者ID列表
+     *
+     * 从Broker端获取当前所有的消费者实例ID列表
      *
      * @param topic
      * @param group

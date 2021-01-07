@@ -252,11 +252,15 @@ public abstract class RebalanceImpl {
 
     /**
      * 执行rebalance操作
+     * 遍历所有的订阅关系中的Topic,然后一次对每个Topic进行重平衡
      * @param isOrder
      */
     public void doRebalance(final boolean isOrder) {
         Map<String, SubscriptionData> subTable = this.getSubscriptionInner();
         if (subTable != null) {
+            /**
+             * 遍历Topic执行Rebalance
+             */
             for (final Map.Entry<String, SubscriptionData> entry : subTable.entrySet()) {
                 final String topic = entry.getKey();
                 try {
@@ -276,11 +280,22 @@ public abstract class RebalanceImpl {
         return subscriptionInner;
     }
 
+    /**
+     * 对某个队列执行重平衡
+     * @param topic
+     * @param isOrder
+     */
     private void rebalanceByTopic(final String topic, final boolean isOrder) {
         switch (messageModel) {
+            /**
+             * 广播模式重平衡
+             */
             case BROADCASTING: {
                 Set<MessageQueue> mqSet = this.topicSubscribeInfoTable.get(topic);
                 if (mqSet != null) {
+                    /**
+                     * 更新ProcessQueue
+                     */
                     boolean changed = this.updateProcessQueueTableInRebalance(topic, mqSet, isOrder);
                     if (changed) {
                         this.messageQueueChanged(topic, mqSet, mqSet);
@@ -295,8 +310,17 @@ public abstract class RebalanceImpl {
                 }
                 break;
             }
+            /**
+             * 集群模式重平衡
+             */
             case CLUSTERING: {
+                /**
+                 * 当前Topic下的所有队列集合
+                 */
                 Set<MessageQueue> mqSet = this.topicSubscribeInfoTable.get(topic);
+                /**
+                 * 获取当前的所有消费者实例ID
+                 */
                 List<String> cidAll = this.mQClientFactory.findConsumerIdList(topic, consumerGroup);
                 if (null == mqSet) {
                     if (!topic.startsWith(MixAll.RETRY_GROUP_TOPIC_PREFIX)) {
@@ -312,9 +336,24 @@ public abstract class RebalanceImpl {
                     List<MessageQueue> mqAll = new ArrayList<MessageQueue>();
                     mqAll.addAll(mqSet);
 
+                    /**
+                     * 由于不是所有消费者客户端进行通信，所以将所有的MQAll和CliAll排序。
+                     * 排序的目的是保证所有的消费者客户端在做Rebalance的时候看到的Queue列表
+                     * 和消费者客户端列表都是一样的视图，做Rebalance的时候才不会出错。
+                     */
+
+                    /**
+                     * 对所有的Queue进行排序
+                     */
                     Collections.sort(mqAll);
+                    /**
+                     * 排序所有的消费者
+                     */
                     Collections.sort(cidAll);
 
+                    /**
+                     * Queue分配算法
+                     */
                     AllocateMessageQueueStrategy strategy = this.allocateMessageQueueStrategy;
 
                     List<MessageQueue> allocateResult = null;
@@ -335,6 +374,9 @@ public abstract class RebalanceImpl {
                         allocateResultSet.addAll(allocateResult);
                     }
 
+                    /**
+                     * 分配结束，动态更新ProcessQueue
+                     */
                     boolean changed = this.updateProcessQueueTableInRebalance(topic, allocateResultSet, isOrder);
                     if (changed) {
                         log.info(
@@ -367,7 +409,9 @@ public abstract class RebalanceImpl {
     }
 
     /**
-     * 在rebalance中更新processQueue
+     * Rebalance时，在完成队列的分配之后，更新MessageQueue与ProcessQueue的对应关系
+     * 已经不在当前消费者消费的队列ProcessQueue设置为丢弃
+     * 添加的Queue添加对应ProcessQueue执行消息拉取任务
      * @param topic
      * @param mqSet
      * @param isOrder
@@ -377,6 +421,9 @@ public abstract class RebalanceImpl {
         final boolean isOrder) {
         boolean changed = false;
 
+        /**
+         * 查找已经移除的Queue
+         */
         Iterator<Entry<MessageQueue, ProcessQueue>> it = this.processQueueTable.entrySet().iterator();
         while (it.hasNext()) {
             Entry<MessageQueue, ProcessQueue> next = it.next();
@@ -384,6 +431,9 @@ public abstract class RebalanceImpl {
             ProcessQueue pq = next.getValue();
 
             if (mq.getTopic().equals(topic)) {
+                /**
+                 * 如果当前队列，已经移除则设置ProcessQueue为丢弃状态
+                 */
                 if (!mqSet.contains(mq)) {
                     pq.setDropped(true);
                     if (this.removeUnnecessaryMessageQueue(mq, pq)) {
@@ -411,6 +461,10 @@ public abstract class RebalanceImpl {
             }
         }
 
+        /**
+         * 查找新增Queue
+         * 并新建PullRequest和ProcessQueue
+         */
         List<PullRequest> pullRequestList = new ArrayList<PullRequest>();
         for (MessageQueue mq : mqSet) {
             if (!this.processQueueTable.containsKey(mq)) {
@@ -419,14 +473,23 @@ public abstract class RebalanceImpl {
                     continue;
                 }
 
+                /**
+                 * 创建一个ProcessQueue
+                 */
                 this.removeDirtyOffset(mq);
                 ProcessQueue pq = new ProcessQueue();
+                /**
+                 * 重置该队列的消费位点
+                 */
                 long nextOffset = this.computePullFromWhere(mq);
                 if (nextOffset >= 0) {
                     ProcessQueue pre = this.processQueueTable.putIfAbsent(mq, pq);
                     if (pre != null) {
                         log.info("doRebalance, {}, mq already exists, {}", consumerGroup, mq);
                     } else {
+                        /**
+                         * 新增一个PullRequest，唯一创建PullRequest的地方
+                         */
                         log.info("doRebalance, {}, add a new mq, {}", consumerGroup, mq);
                         PullRequest pullRequest = new PullRequest();
                         pullRequest.setConsumerGroup(consumerGroup);
@@ -442,6 +505,9 @@ public abstract class RebalanceImpl {
             }
         }
 
+        /**
+         * 执行一次消息拉取
+         */
         this.dispatchPullRequest(pullRequestList);
 
         return changed;

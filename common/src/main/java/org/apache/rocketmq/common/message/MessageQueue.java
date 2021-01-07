@@ -100,6 +100,11 @@ public class MessageQueue implements Comparable<MessageQueue>, Serializable {
         return "MessageQueue [topic=" + topic + ", brokerName=" + brokerName + ", queueId=" + queueId + "]";
     }
 
+    /**
+     * 按topic、broker、和queueId排序
+     * @param o
+     * @return
+     */
     @Override
     public int compareTo(MessageQueue o) {
         {

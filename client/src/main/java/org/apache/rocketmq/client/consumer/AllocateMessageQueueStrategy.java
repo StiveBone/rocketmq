@@ -20,11 +20,15 @@ import java.util.List;
 import org.apache.rocketmq.common.message.MessageQueue;
 
 /**
+ * 重平衡算法，在执行Rebalance时给每个消费者实例分配指定的Queue
+ *
  * Strategy Algorithm for message allocating between consumers
  */
 public interface AllocateMessageQueueStrategy {
 
     /**
+     * 根据clientInstanceId进行MessageQueue的重新分配
+     *
      * Allocating by consumer id
      *
      * @param consumerGroup current consumer group
@@ -41,6 +45,8 @@ public interface AllocateMessageQueueStrategy {
     );
 
     /**
+     * 获取当前分配算法的名字
+     *
      * Algorithm name
      *
      * @return The strategy name
