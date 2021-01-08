@@ -46,11 +46,21 @@ public class ProcessQueue {
     private final static long PULL_MAX_IDLE_TIME = Long.parseLong(System.getProperty("rocketmq.client.pull.pullMaxIdleTime", "120000"));
     private final InternalLogger log = ClientLogger.getLog();
     private final ReadWriteLock lockTreeMap = new ReentrantReadWriteLock();
+    /**
+     * 消息缓存，key为消息的偏移量
+     */
     private final TreeMap<Long, MessageExt> msgTreeMap = new TreeMap<Long, MessageExt>();
+    /**
+     * 消息条数
+     */
     private final AtomicLong msgCount = new AtomicLong();
+    /**
+     * 消息总量大小
+     */
     private final AtomicLong msgSize = new AtomicLong();
     private final Lock lockConsume = new ReentrantLock();
     /**
+     * msgTreeMap的子集，顺序消费map
      * A subset of msgTreeMap, will only be used when orderly consume
      */
     private final TreeMap<Long, MessageExt> consumingMsgOrderlyTreeMap = new TreeMap<Long, MessageExt>();
@@ -125,6 +135,11 @@ public class ProcessQueue {
         }
     }
 
+    /**
+     * 将拉取到的消息缓存到ProcessQueue
+     * @param msgs
+     * @return
+     */
     public boolean putMessage(final List<MessageExt> msgs) {
         boolean dispatchToConsume = false;
         try {
@@ -166,6 +181,11 @@ public class ProcessQueue {
         return dispatchToConsume;
     }
 
+    /**
+     * 用于计算本地消息缓存队列中第一个消息和最后一个消息的offerset差值
+     *
+     * @return
+     */
     public long getMaxSpan() {
         try {
             this.lockTreeMap.readLock().lockInterruptibly();

@@ -245,7 +245,7 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
     private long pullInterval = 0;
 
     /**
-     *
+     * ConsumeMessageService推送给用户消费者的消息数量大小
      * Batch consumption size
      */
     private int consumeMessageBatchMaxSize = 1;
@@ -283,7 +283,7 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
     private long suspendCurrentQueueTimeMillis = 1000;
 
     /**
-     * 消费超时时间单位min默认15分钟
+     * 消费超时时间单位min默认15分钟，指用户代码消费的时长
      * Maximum amount of time in minutes a message may block the consuming thread.
      */
     private long consumeTimeout = 15;
