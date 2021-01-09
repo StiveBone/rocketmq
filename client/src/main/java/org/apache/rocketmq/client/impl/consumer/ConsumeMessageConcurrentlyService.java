@@ -48,6 +48,9 @@ import org.apache.rocketmq.common.protocol.body.CMResult;
 import org.apache.rocketmq.common.protocol.body.ConsumeMessageDirectlyResult;
 import org.apache.rocketmq.remoting.common.RemotingHelper;
 
+/**
+ * 并行进行消息分分发
+ */
 public class ConsumeMessageConcurrentlyService implements ConsumeMessageService {
     private static final InternalLogger log = ClientLogger.getLog();
     /**
@@ -269,6 +272,10 @@ public class ConsumeMessageConcurrentlyService implements ConsumeMessageService 
         }
     }
 
+    /**
+     * 如果消息来自重试队列，将队列名称还原成原来的队列名称
+     * @param msgs
+     */
     public void resetRetryTopic(final List<MessageExt> msgs) {
         final String groupTopic = MixAll.getRetryTopic(consumerGroup);
         for (MessageExt msg : msgs) {
@@ -306,6 +313,9 @@ public class ConsumeMessageConcurrentlyService implements ConsumeMessageService 
             return;
 
         switch (status) {
+            /**
+             * 指标统计，
+             */
             case CONSUME_SUCCESS:
                 if (ackIndex >= consumeRequest.getMsgs().size()) {
                     ackIndex = consumeRequest.getMsgs().size() - 1;
@@ -324,6 +334,9 @@ public class ConsumeMessageConcurrentlyService implements ConsumeMessageService 
                 break;
         }
 
+        /**
+         * 重试处理
+         */
         switch (this.defaultMQPushConsumer.getMessageModel()) {
             /**
              * 广播模式 消费失败 消息丢弃
@@ -470,6 +483,9 @@ public class ConsumeMessageConcurrentlyService implements ConsumeMessageService 
 
             /**
              * 执行消费前回调
+             * 执行消费前hook调用和重试预处理。
+             * 消费前的hook可以对消息进行校验。如果拉取来的消息
+             *
              */
             ConsumeMessageContext consumeMessageContext = null;
             if (ConsumeMessageConcurrentlyService.this.defaultMQPushConsumerImpl.hasHook()) {
@@ -487,7 +503,9 @@ public class ConsumeMessageConcurrentlyService implements ConsumeMessageService 
             ConsumeReturnType returnType = ConsumeReturnType.SUCCESS;
             try {
                 /**
-                 * 设置重试队列
+                 * 消息预处理
+                 *
+                 * 如果消息来自重试队列，将队列名称还原成原来的队列名称
                  */
                 ConsumeMessageConcurrentlyService.this.resetRetryTopic(msgs);
                 if (msgs != null && !msgs.isEmpty()) {

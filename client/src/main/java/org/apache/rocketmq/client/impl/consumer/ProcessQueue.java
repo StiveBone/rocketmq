@@ -47,7 +47,7 @@ public class ProcessQueue {
     private final InternalLogger log = ClientLogger.getLog();
     private final ReadWriteLock lockTreeMap = new ReentrantReadWriteLock();
     /**
-     * 消息缓存，key为消息的偏移量
+     * 消息缓存，key为消息的偏移量。用来缓存本地顺序消息
      */
     private final TreeMap<Long, MessageExt> msgTreeMap = new TreeMap<Long, MessageExt>();
     /**
@@ -58,6 +58,9 @@ public class ProcessQueue {
      * 消息总量大小
      */
     private final AtomicLong msgSize = new AtomicLong();
+    /**
+     * 消费锁
+     */
     private final Lock lockConsume = new ReentrantLock();
     /**
      * msgTreeMap的子集，顺序消费map
@@ -278,6 +281,10 @@ public class ProcessQueue {
         }
     }
 
+    /**
+     * 消费成功清除 consumingMsgOrderlyTreeMap
+     * @return
+     */
     public long commit() {
         try {
             this.lockTreeMap.writeLock().lockInterruptibly();
@@ -301,6 +308,10 @@ public class ProcessQueue {
         return -1;
     }
 
+    /**
+     * 将消息重新放回msgTreeMap，等待下次再次消费
+     * @param msgs
+     */
     public void makeMessageToCosumeAgain(List<MessageExt> msgs) {
         try {
             this.lockTreeMap.writeLock().lockInterruptibly();
@@ -317,6 +328,11 @@ public class ProcessQueue {
         }
     }
 
+    /**
+     * 从ProcessQueue顺序拉取消息
+     * @param batchSize 每次拉取多少条消息
+     * @return
+     */
     public List<MessageExt> takeMessags(final int batchSize) {
         List<MessageExt> result = new ArrayList<MessageExt>(batchSize);
         final long now = System.currentTimeMillis();
@@ -326,6 +342,9 @@ public class ProcessQueue {
             try {
                 if (!this.msgTreeMap.isEmpty()) {
                     for (int i = 0; i < batchSize; i++) {
+                        /**
+                         * 从MessageMap中迁移数据到consumingMsgOrderlyTreeMap中
+                         */
                         Map.Entry<Long, MessageExt> entry = this.msgTreeMap.pollFirstEntry();
                         if (entry != null) {
                             result.add(entry.getValue());
