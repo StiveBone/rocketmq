@@ -347,6 +347,10 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
 
                             DefaultMQPushConsumerImpl.this.executePullRequestImmediately(pullRequest);
                             break;
+                        /**
+                         * 如果拉取到一次非法的消费点位，消费会将本地的最新的消费点位上报Broker
+                         * 以便下次能够拉取到正取的消息，
+                         */
                         case OFFSET_ILLEGAL:
                             log.warn("the pull request offset illegal, {} {}",
                                 pullRequest.toString(), pullResult.toString());
@@ -390,9 +394,13 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
 
         boolean commitOffsetEnable = false;
         long commitOffsetValue = 0L;
+        /**
+         * 在执行拉取动作之前，如果是集群消费，并且本地消费点位值大于0
+         * 那么把最新的位点上传Broker。
+         */
         if (MessageModel.CLUSTERING == this.defaultMQPushConsumer.getMessageModel()) {
             commitOffsetValue = this.offsetStore.readOffset(pullRequest.getMessageQueue(), ReadOffsetType.READ_FROM_MEMORY);
-            if (commitOffsetValue > 0) {
+            if (commitOffsetValue > 0) { //最新的上传位点
                 commitOffsetEnable = true;
             }
         }
@@ -539,6 +547,9 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
                 break;
             case RUNNING:
                 this.consumeMessageService.shutdown();
+                /**
+                 * 持久化消费位点
+                 */
                 this.persistConsumerOffset();
                 this.mQClientFactory.unregisterConsumer(this.defaultMQPushConsumer.getConsumerGroup());
                 this.mQClientFactory.shutdown();
@@ -877,7 +888,7 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
     }
 
     /**
-     * 复制订阅关系
+     * 复制订阅关系，通过构造器设置的订阅关系
      * 将配置的订阅关系复制到rebalance服务
      * @throws MQClientException
      */
@@ -939,6 +950,12 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
         return this.rebalanceImpl.getSubscriptionInner();
     }
 
+    /**
+     * 订阅Topic 向平衡服务注册订阅了那些Topic
+     * @param topic
+     * @param subExpression
+     * @throws MQClientException
+     */
     public void subscribe(String topic, String subExpression) throws MQClientException {
         try {
             SubscriptionData subscriptionData = FilterAPI.buildSubscriptionData(this.defaultMQPushConsumer.getConsumerGroup(),
@@ -952,6 +969,13 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
         }
     }
 
+    /**
+     * 将订阅关系发送给重平衡服务
+     * @param topic
+     * @param fullClassName
+     * @param filterClassSource
+     * @throws MQClientException
+     */
     public void subscribe(String topic, String fullClassName, String filterClassSource) throws MQClientException {
         try {
             SubscriptionData subscriptionData = FilterAPI.buildSubscriptionData(this.defaultMQPushConsumer.getConsumerGroup(),
@@ -969,6 +993,12 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
         }
     }
 
+    /**
+     * 发送订阅关系给重平衡服务
+     * @param topic
+     * @param messageSelector
+     * @throws MQClientException
+     */
     public void subscribe(final String topic, final MessageSelector messageSelector) throws MQClientException {
         try {
             if (messageSelector == null) {
