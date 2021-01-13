@@ -139,6 +139,26 @@ public class PullAPIWrapper {
         }
     }
 
+    /**
+     *
+     * @param mq 拉取的队列
+     * @param subExpression 消息过滤表达式
+     * @param expressionType 表达式类型
+     * @param subVersion 订阅关系版本号
+     * @param offset
+     * @param maxNums
+     * @param sysFlag
+     * @param commitOffset
+     * @param brokerSuspendMaxTimeMillis
+     * @param timeoutMillis
+     * @param communicationMode
+     * @param pullCallback
+     * @return
+     * @throws MQClientException
+     * @throws RemotingException
+     * @throws MQBrokerException
+     * @throws InterruptedException
+     */
     public PullResult pullKernelImpl(
         final MessageQueue mq,
         final String subExpression,
