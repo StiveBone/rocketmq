@@ -17,10 +17,18 @@
 package org.apache.rocketmq.client.impl.consumer;
 
 import java.util.List;
+
 import org.apache.rocketmq.common.message.MessageExt;
 import org.apache.rocketmq.common.message.MessageQueue;
 import org.apache.rocketmq.common.protocol.body.ConsumeMessageDirectlyResult;
 
+/**
+ * 消息消费分发服务，
+ * 通过submitConsumeRequest方法，接收消息消费分发任务，
+ * ConsumeMessageConcurrentlyService：通过线程池并行的进行消息的分发；
+ * ConsumeMessageOrderlyService：先将Pull到的消息放到本地另外一个缓存队列中，
+ * 然后提交一个ConsumeRequest到消费线程池
+ */
 public interface ConsumeMessageService {
     void start();
 
@@ -36,9 +44,18 @@ public interface ConsumeMessageService {
 
     ConsumeMessageDirectlyResult consumeMessageDirectly(final MessageExt msg, final String brokerName);
 
+    /**
+     * 将消息封装成线程池任务，提交给消费服务，消费服务再将消息传递给业务进行处理
+     * 提交消息到消费服务，进行消费
+     *
+     * @param msgs             消息列表
+     * @param processQueue     ProcessQueue
+     * @param messageQueue     消息队列
+     * @param dispathToConsume 是否转发给消费者
+     */
     void submitConsumeRequest(
-        final List<MessageExt> msgs,
-        final ProcessQueue processQueue,
-        final MessageQueue messageQueue,
-        final boolean dispathToConsume);
+            final List<MessageExt> msgs,
+            final ProcessQueue processQueue,
+            final MessageQueue messageQueue,
+            final boolean dispathToConsume);
 }

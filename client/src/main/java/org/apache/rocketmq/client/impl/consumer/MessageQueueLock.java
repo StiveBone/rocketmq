@@ -21,6 +21,8 @@ import java.util.concurrent.ConcurrentMap;
 import org.apache.rocketmq.common.message.MessageQueue;
 
 /**
+ * 消息队列锁，严格保证一个Queue只有一个线程在消费
+ *
  * Message lock,strictly ensure the single queue only one thread at a time consuming
  */
 public class MessageQueueLock {

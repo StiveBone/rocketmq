@@ -532,6 +532,9 @@ public class BrokerController {
         }
     }
 
+    /**
+     * 注册请求处理器
+     */
     public void registerProcessor() {
         /**
          * SendMessageProcessor
@@ -566,6 +569,7 @@ public class BrokerController {
 
         /**
          * ClientManageProcessor
+         * 客户端管理请求处理器，
          */
         ClientManageProcessor clientProcessor = new ClientManageProcessor(this);
         this.remotingServer.registerProcessor(RequestCode.HEART_BEAT, clientProcessor, this.heartbeatExecutor);

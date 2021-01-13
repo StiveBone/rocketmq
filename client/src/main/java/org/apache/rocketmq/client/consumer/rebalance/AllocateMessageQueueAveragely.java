@@ -53,6 +53,9 @@ public class AllocateMessageQueueAveragely implements AllocateMessageQueueStrate
             return result;
         }
 
+        /**
+         * cid的位置
+         */
         int index = cidAll.indexOf(currentCID);
         int mod = mqAll.size() % cidAll.size();
         int averageSize =
@@ -69,5 +72,32 @@ public class AllocateMessageQueueAveragely implements AllocateMessageQueueStrate
     @Override
     public String getName() {
         return "AVG";
+    }
+
+    public static void main(String[] args) {
+        AllocateMessageQueueAveragely allocateMessageQueueAveragely = new AllocateMessageQueueAveragely();
+        MessageQueue messageQueueA = new MessageQueue();
+        messageQueueA.setTopic("A");
+        messageQueueA.setQueueId(1);
+
+        MessageQueue messageQueueB = new MessageQueue();
+        messageQueueB.setTopic("A");
+        messageQueueB.setQueueId(2);
+
+        MessageQueue messageQueueC = new MessageQueue();
+        messageQueueC.setTopic("A");
+        messageQueueC.setQueueId(3);
+
+        List<MessageQueue> mqAll = new ArrayList<MessageQueue>();
+        mqAll.add(messageQueueA);
+//        mqAll.add(messageQueueB);
+//        mqAll.add(messageQueueC);
+
+        List<String> cidAll = new ArrayList<String>();
+        cidAll.add("1");
+        cidAll.add("2");
+        cidAll.add("3");
+
+        allocateMessageQueueAveragely.allocate("test", "2", mqAll, cidAll);
     }
 }
