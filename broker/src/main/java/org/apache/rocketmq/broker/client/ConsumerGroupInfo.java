@@ -17,6 +17,7 @@
 package org.apache.rocketmq.broker.client;
 
 import io.netty.channel.Channel;
+
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -24,6 +25,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+
 import org.apache.rocketmq.common.constant.LoggerName;
 import org.apache.rocketmq.common.consumer.ConsumeFromWhere;
 import org.apache.rocketmq.logging.InternalLogger;
@@ -32,20 +34,41 @@ import org.apache.rocketmq.common.protocol.heartbeat.ConsumeType;
 import org.apache.rocketmq.common.protocol.heartbeat.MessageModel;
 import org.apache.rocketmq.common.protocol.heartbeat.SubscriptionData;
 
+/**
+ * 消费者组信息
+ */
 public class ConsumerGroupInfo {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
+    /**
+     * 消费者组名
+     */
     private final String groupName;
+    /**
+     * topic的订阅信息
+     */
     private final ConcurrentMap<String/* Topic */, SubscriptionData> subscriptionTable =
-        new ConcurrentHashMap<String, SubscriptionData>();
+            new ConcurrentHashMap<String, SubscriptionData>();
+    /**
+     * 每个消费者实例的长连接信息
+     */
     private final ConcurrentMap<Channel, ClientChannelInfo> channelInfoTable =
-        new ConcurrentHashMap<Channel, ClientChannelInfo>(16);
+            new ConcurrentHashMap<Channel, ClientChannelInfo>(16);
+    /**
+     * 消费类型
+     */
     private volatile ConsumeType consumeType;
+    /**
+     * 消费模式
+     */
     private volatile MessageModel messageModel;
+    /**
+     * 消费起始位点
+     */
     private volatile ConsumeFromWhere consumeFromWhere;
     private volatile long lastUpdateTimestamp = System.currentTimeMillis();
 
     public ConsumerGroupInfo(String groupName, ConsumeType consumeType, MessageModel messageModel,
-        ConsumeFromWhere consumeFromWhere) {
+                             ConsumeFromWhere consumeFromWhere) {
         this.groupName = groupName;
         this.consumeType = consumeType;
         this.messageModel = messageModel;
@@ -94,6 +117,10 @@ public class ConsumerGroupInfo {
         return result;
     }
 
+    /**
+     * 客户端取消注册
+     * @param clientChannelInfo
+     */
     public void unregisterChannel(final ClientChannelInfo clientChannelInfo) {
         ClientChannelInfo old = this.channelInfoTable.remove(clientChannelInfo.getChannel());
         if (old != null) {
@@ -105,16 +132,25 @@ public class ConsumerGroupInfo {
         final ClientChannelInfo info = this.channelInfoTable.remove(channel);
         if (info != null) {
             log.warn(
-                "NETTY EVENT: remove not active channel[{}] from ConsumerGroupInfo groupChannelTable, consumer group: {}",
-                info.toString(), groupName);
+                    "NETTY EVENT: remove not active channel[{}] from ConsumerGroupInfo groupChannelTable, consumer group: {}",
+                    info.toString(), groupName);
             return true;
         }
 
         return false;
     }
 
+    /**
+     * 更新消费者信息
+     *
+     * @param infoNew          长连接信息
+     * @param consumeType      消费方式
+     * @param messageModel     消费模式
+     * @param consumeFromWhere 消费位点
+     * @return true or false
+     */
     public boolean updateChannel(final ClientChannelInfo infoNew, ConsumeType consumeType,
-        MessageModel messageModel, ConsumeFromWhere consumeFromWhere) {
+                                 MessageModel messageModel, ConsumeFromWhere consumeFromWhere) {
         boolean updated = false;
         this.consumeType = consumeType;
         this.messageModel = messageModel;
@@ -125,7 +161,7 @@ public class ConsumerGroupInfo {
             ClientChannelInfo prev = this.channelInfoTable.put(infoNew.getChannel(), infoNew);
             if (null == prev) {
                 log.info("new consumer connected, group: {} {} {} channel: {}", this.groupName, consumeType,
-                    messageModel, infoNew.toString());
+                        messageModel, infoNew.toString());
                 updated = true;
             }
 
@@ -133,9 +169,9 @@ public class ConsumerGroupInfo {
         } else {
             if (!infoOld.getClientId().equals(infoNew.getClientId())) {
                 log.error("[BUG] consumer channel exist in broker, but clientId not equal. GROUP: {} OLD: {} NEW: {} ",
-                    this.groupName,
-                    infoOld.toString(),
-                    infoNew.toString());
+                        this.groupName,
+                        infoOld.toString(),
+                        infoNew.toString());
                 this.channelInfoTable.put(infoNew.getChannel(), infoNew);
             }
         }
@@ -146,6 +182,11 @@ public class ConsumerGroupInfo {
         return updated;
     }
 
+    /**
+     * 更新订阅信息
+     * @param subList
+     * @return
+     */
     public boolean updateSubscription(final Set<SubscriptionData> subList) {
         boolean updated = false;
 
@@ -156,15 +197,15 @@ public class ConsumerGroupInfo {
                 if (null == prev) {
                     updated = true;
                     log.info("subscription changed, add new topic, group: {} {}",
-                        this.groupName,
-                        sub.toString());
+                            this.groupName,
+                            sub.toString());
                 }
             } else if (sub.getSubVersion() > old.getSubVersion()) {
                 if (this.consumeType == ConsumeType.CONSUME_PASSIVELY) {
                     log.info("subscription changed, group: {} OLD: {} NEW: {}",
-                        this.groupName,
-                        old.toString(),
-                        sub.toString()
+                            this.groupName,
+                            old.toString(),
+                            sub.toString()
                     );
                 }
 
@@ -187,9 +228,9 @@ public class ConsumerGroupInfo {
 
             if (!exist) {
                 log.warn("subscription changed, group: {} remove topic {} {}",
-                    this.groupName,
-                    oldTopic,
-                    next.getValue().toString()
+                        this.groupName,
+                        oldTopic,
+                        next.getValue().toString()
                 );
 
                 it.remove();
