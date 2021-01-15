@@ -16,8 +16,17 @@
  */
 package org.apache.rocketmq.common.sysflag;
 
+/**
+ * 消息拉取系统标识
+ */
 public class PullSysFlag {
+    /**
+     * 消费者提交最新消费位点标识
+     */
     private final static int FLAG_COMMIT_OFFSET = 0x1 << 0;
+    /**
+     *
+     */
     private final static int FLAG_SUSPEND = 0x1 << 1;
     private final static int FLAG_SUBSCRIPTION = 0x1 << 2;
     private final static int FLAG_CLASS_FILTER = 0x1 << 3;

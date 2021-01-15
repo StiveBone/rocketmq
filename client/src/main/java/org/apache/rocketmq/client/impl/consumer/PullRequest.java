@@ -31,6 +31,9 @@ public class PullRequest {
      * 本地消息缓存
      */
     private ProcessQueue processQueue;
+    /**
+     * 下一个偏移量
+     */
     private long nextOffset;
     private boolean lockedFirst = false;
 

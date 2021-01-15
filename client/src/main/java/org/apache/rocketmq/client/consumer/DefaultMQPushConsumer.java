@@ -251,6 +251,7 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
     private int consumeMessageBatchMaxSize = 1;
 
     /**
+     * 一次拉取到本地的最大消息
      * Batch pull size
      */
     private int pullBatchSize = 32;

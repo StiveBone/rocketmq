@@ -643,6 +643,19 @@ public class MQClientAPIImpl {
         throw new MQBrokerException(response.getCode(), response.getRemark());
     }
 
+    /**
+     * 执行消息拉取
+     *
+     * @param addr              broker地址
+     * @param requestHeader     请求对象
+     * @param timeoutMillis     超时时间
+     * @param communicationMode 通信模式
+     * @param pullCallback      回调
+     * @return
+     * @throws RemotingException
+     * @throws MQBrokerException
+     * @throws InterruptedException
+     */
     public PullResult pullMessage(
             final String addr,
             final PullMessageRequestHeader requestHeader,
@@ -711,6 +724,14 @@ public class MQClientAPIImpl {
         return this.processPullResponse(response);
     }
 
+    /**
+     * 拉取结果处理，对响应结果进行解码 PullMessageResponseHeader
+     *
+     * @param response
+     * @return
+     * @throws MQBrokerException
+     * @throws RemotingCommandException
+     */
     private PullResult processPullResponse(
             final RemotingCommand response) throws MQBrokerException, RemotingCommandException {
         PullStatus pullStatus = PullStatus.NO_NEW_MSG;

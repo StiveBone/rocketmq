@@ -89,7 +89,14 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
      * Delay some time when suspend pull service
      */
     private static final long PULL_TIME_DELAY_MILLS_WHEN_SUSPEND = 1000;
+    /**
+     * 如果一次拉取请求在broker端没有消息则broker端将执行挂起机制
+     * 这个字段表名该次请求可以挂起多长时间
+     */
     private static final long BROKER_SUSPEND_MAX_TIME_MILLIS = 1000 * 15;
+    /**
+     * 等待broker端挂起的超时时间
+     */
     private static final long CONSUMER_TIMEOUT_MILLIS_WHEN_SUSPEND = 1000 * 30;
     private final InternalLogger log = ClientLogger.getLog();
     private final DefaultMQPushConsumer defaultMQPushConsumer;
@@ -100,6 +107,9 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
     private final RPCHook rpcHook;
     private volatile ServiceState serviceState = ServiceState.CREATE_JUST;
     private MQClientInstance mQClientFactory;
+    /**
+     * 消息拉取API wrapper
+     */
     private PullAPIWrapper pullAPIWrapper;
     private volatile boolean pause = false;
     private boolean consumeOrderly = false;
@@ -388,6 +398,9 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
                     log.warn("execute the pull request exception", e);
                 }
 
+                /**
+                 * 拉取异常 延迟重试
+                 */
                 DefaultMQPushConsumerImpl.this.executePullRequestLater(pullRequest, PULL_TIME_DELAY_MILLS_WHEN_EXCEPTION);
             }
         };
@@ -417,10 +430,10 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
         }
 
         int sysFlag = PullSysFlag.buildSysFlag(
-            commitOffsetEnable, // commitOffset
-            true, // suspend
-            subExpression != null, // subscription
-            classFilter // class filter
+            commitOffsetEnable, // commitOffset //消费者提交最新本地消费位点是否可用
+            true, // suspend broker 是否 suspend
+            subExpression != null, // subscription 过滤表达式是否存在
+            classFilter // class filter 是否存在classFilter
         );
         try {
             this.pullAPIWrapper.pullKernelImpl(
@@ -506,6 +519,17 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
         log.info("resume this consumer, {}", this.defaultMQPushConsumer.getConsumerGroup());
     }
 
+    /**
+     * 发送回broker 如果发送失败则发送到重试队列
+     *
+     * @param msg
+     * @param delayLevel
+     * @param brokerName
+     * @throws RemotingException
+     * @throws MQBrokerException
+     * @throws InterruptedException
+     * @throws MQClientException
+     */
     public void sendMessageBack(MessageExt msg, int delayLevel, final String brokerName)
         throws RemotingException, MQBrokerException, InterruptedException, MQClientException {
         try {
@@ -916,7 +940,7 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
                 case BROADCASTING:
                     break;
                 /**
-                 * 集群模式将重试Topic订阅关系发送给rebalance服务
+                 * 集群模式将重试Topic订阅关系发送给rebalance服务，集群模式下 每个消费者组中的实例都会订阅消费者组的重试队列
                  */
                 case CLUSTERING:
                     final String retryTopic = MixAll.getRetryTopic(this.defaultMQPushConsumer.getConsumerGroup());

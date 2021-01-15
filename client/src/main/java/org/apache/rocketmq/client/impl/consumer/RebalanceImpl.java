@@ -534,6 +534,11 @@ public abstract class RebalanceImpl {
 
     public abstract void removeDirtyOffset(final MessageQueue mq);
 
+    /**
+     * 读取消费位点
+     * @param mq
+     * @return
+     */
     public abstract long computePullFromWhere(final MessageQueue mq);
 
     /**
