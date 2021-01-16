@@ -998,6 +998,18 @@ public class MQClientAPIImpl {
         throw new MQBrokerException(response.getCode(), response.getRemark());
     }
 
+    /**
+     * 取消客户端
+     *
+     * @param addr
+     * @param clientID
+     * @param producerGroup
+     * @param consumerGroup
+     * @param timeoutMillis
+     * @throws RemotingException
+     * @throws MQBrokerException
+     * @throws InterruptedException
+     */
     public void unregisterClient(
             final String addr,
             final String clientID,

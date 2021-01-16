@@ -946,6 +946,9 @@ public class MQClientInstance {
         return result;
     }
 
+    /**
+     * 关闭服务
+     */
     public void shutdown() {
         // Consumer
         if (!this.consumerTable.isEmpty())
@@ -1036,6 +1039,12 @@ public class MQClientInstance {
         }
     }
 
+    /**
+     * 向broker取消注册消费者
+     *
+     * @param producerGroup
+     * @param consumerGroup
+     */
     private void unregisterClient(final String producerGroup, final String consumerGroup) {
         Iterator<Entry<String, HashMap<Long, String>>> it = this.brokerAddrTable.entrySet().iterator();
         while (it.hasNext()) {
