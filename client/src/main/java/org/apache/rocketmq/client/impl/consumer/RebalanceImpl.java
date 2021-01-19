@@ -165,6 +165,7 @@ public abstract class RebalanceImpl {
 
     /**
      * 为MessageQueue加锁
+     * 加锁的原因是由于在Rebalance之后该队列可能会被分配到其他消费者，导致此时会有2个消费者消费同一个queue
      * @param mq
      */
     public boolean lock(final MessageQueue mq) {
@@ -223,6 +224,9 @@ public abstract class RebalanceImpl {
                     Set<MessageQueue> lockOKMQSet =
                         this.mQClientFactory.getMQClientAPIImpl().lockBatchMQ(findBrokerResult.getBrokerAddr(), requestBody, 1000);
 
+                    /**
+                     * 将加锁成功的队列设置为被自己锁定
+                     */
                     for (MessageQueue mq : lockOKMQSet) {
                         ProcessQueue processQueue = this.processQueueTable.get(mq);
                         if (processQueue != null) {
@@ -234,6 +238,9 @@ public abstract class RebalanceImpl {
                             processQueue.setLastLockTimestamp(System.currentTimeMillis());
                         }
                     }
+                    /**
+                     * 将锁定失败的队列设置为没有被自己锁定
+                     */
                     for (MessageQueue mq : mqs) {
                         if (!lockOKMQSet.contains(mq)) {
                             ProcessQueue processQueue = this.processQueueTable.get(mq);

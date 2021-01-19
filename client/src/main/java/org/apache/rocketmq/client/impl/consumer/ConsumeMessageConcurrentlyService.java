@@ -279,7 +279,7 @@ public class ConsumeMessageConcurrentlyService implements ConsumeMessageService 
     public void resetRetryTopic(final List<MessageExt> msgs) {
         final String groupTopic = MixAll.getRetryTopic(consumerGroup);
         for (MessageExt msg : msgs) {
-            String retryTopic = msg.getProperty(MessageConst.PROPERTY_RETRY_TOPIC);
+            String retryTopic = msg.getProperty(MessageConst.PROPERTY_RETRY_TOPIC); //原来的Topic
             if (retryTopic != null && groupTopic.equals(msg.getTopic())) {
                 msg.setTopic(retryTopic);
             }

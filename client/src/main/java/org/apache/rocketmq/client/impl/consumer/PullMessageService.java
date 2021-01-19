@@ -100,7 +100,7 @@ public class PullMessageService extends ServiceThread {
     }
 
     /**
-     * 执行消息拉取
+     * 执行消息拉取，由消息拉取服务{@link PullMessageService} 定时拉取消息
      *
      * @param pullRequest
      */

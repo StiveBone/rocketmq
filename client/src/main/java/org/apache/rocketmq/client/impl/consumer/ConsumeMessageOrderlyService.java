@@ -96,6 +96,10 @@ public class ConsumeMessageOrderlyService implements ConsumeMessageService {
     }
 
     public void start() {
+        /**
+         * 如果是顺序消费 锁住当前分配的所有Queue。在执行消息拉取时，顺序消费会校验当前Queue是不是被自己锁定，如果是被自己锁定则执行拉取，如果不是则放弃消息拉取
+         * 建议该定时任务的执行时间 同消息重新负载执行频率相同。
+         */
         if (MessageModel.CLUSTERING.equals(ConsumeMessageOrderlyService.this.defaultMQPushConsumerImpl.messageModel())) {
             this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
                 @Override
@@ -470,7 +474,7 @@ public class ConsumeMessageOrderlyService implements ConsumeMessageService {
             }
 
             /**
-             * 锁定消息队列，由于在消费端锁住的是当前队列，所以在RocketMQ中，
+             * 锁定消本地息队列，由于在消费端锁住的是当前队列，所以在RocketMQ中，
              * 如果需要保证顺序消费需要单线程将先后相互依赖的相关消息发送到同一Queue中
              *
              */
