@@ -101,6 +101,11 @@ public class BrokerOuterAPI {
         return nameSrvAddr;
     }
 
+    /**
+     * 设置name server地址
+     *
+     * @param addrs
+     */
     public void updateNameServerAddressList(final String addrs) {
         List<String> lst = new ArrayList<String>();
         String[] addrArray = addrs.split(";");
