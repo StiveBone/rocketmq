@@ -141,6 +141,9 @@ public class TransactionalMessageServiceImpl implements TransactionalMessageServ
                 }
 
                 List<Long> doneOpOffset = new ArrayList<>();
+                /**
+                 * 已经执行过commit或Rollback
+                 */
                 HashMap<Long, Long> removeMap = new HashMap<>();
                 PullResult pullResult = fillOpRemoveMap(removeMap, opQueue, opOffset, halfOffset, doneOpOffset);
                 if (null == pullResult) {
@@ -152,7 +155,12 @@ public class TransactionalMessageServiceImpl implements TransactionalMessageServ
                 int getMessageNullCount = 1;
                 long newOffset = halfOffset;
                 long i = halfOffset;
+                /**
+                 * 确认每个halfOffset是否需要回查
+                 */
                 while (true) {
+                    /**
+                     */
                     if (System.currentTimeMillis() - startTime > MAX_PROCESS_TIME_LIMIT) {
                         log.info("Queue={} process time reach max={}", messageQueue, MAX_PROCESS_TIME_LIMIT);
                         break;
@@ -161,9 +169,15 @@ public class TransactionalMessageServiceImpl implements TransactionalMessageServ
                         log.info("Half offset {} has been committed/rolled back", i);
                         removeMap.remove(i);
                     } else {
+                        /**
+                         * 查询half消息
+                         */
                         GetResult getResult = getHalfMsg(messageQueue, i);
                         MessageExt msgExt = getResult.getMsg();
                         if (msgExt == null) {
+                            /**
+                             * 超过最大次数不在检查
+                             */
                             if (getMessageNullCount++ > MAX_RETRY_COUNT_WHEN_HALF_NULL) {
                                 break;
                             }

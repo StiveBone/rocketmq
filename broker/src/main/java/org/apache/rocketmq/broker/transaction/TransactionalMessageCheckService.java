@@ -24,6 +24,10 @@ import org.apache.rocketmq.logging.InternalLoggerFactory;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
+/**
+ * 事务消息回查服务，
+ * 如果producer没有将endTransaction发送给Broker会主动询问Producer本地事务执行结果
+ */
 public class TransactionalMessageCheckService extends ServiceThread {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.TRANSACTION_LOGGER_NAME);
 

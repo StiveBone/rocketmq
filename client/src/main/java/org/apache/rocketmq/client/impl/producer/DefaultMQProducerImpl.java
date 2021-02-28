@@ -1265,6 +1265,15 @@ public class DefaultMQProducerImpl implements MQProducerInner {
         }
     }
 
+    /**
+     * 发送事务消息
+     *
+     * @param msg                      消息
+     * @param localTransactionExecuter 本地事务执行器
+     * @param arg                      参数
+     * @return 执行结果
+     * @throws MQClientException
+     */
     public TransactionSendResult sendMessageInTransaction(final Message msg,
                                                           final LocalTransactionExecuter localTransactionExecuter, final Object arg)
             throws MQClientException {
@@ -1275,8 +1284,17 @@ public class DefaultMQProducerImpl implements MQProducerInner {
         Validators.checkMessage(msg, this.defaultMQProducer);
 
         SendResult sendResult = null;
+        /**
+         * 表明是half消息
+         */
         MessageAccessor.putProperty(msg, MessageConst.PROPERTY_TRANSACTION_PREPARED, "true");
+        /**
+         * 设置group
+         */
         MessageAccessor.putProperty(msg, MessageConst.PROPERTY_PRODUCER_GROUP, this.defaultMQProducer.getProducerGroup());
+        /**
+         * 发送消息
+         */
         try {
             sendResult = this.send(msg);
         } catch (Exception e) {
@@ -1295,6 +1313,9 @@ public class DefaultMQProducerImpl implements MQProducerInner {
                     if (null != transactionId && !"".equals(transactionId)) {
                         msg.setTransactionId(transactionId);
                     }
+                    /**
+                     * 执行本地事务
+                     */
                     if (null != localTransactionExecuter) {
                         localTransactionState = localTransactionExecuter.executeLocalTransactionBranch(msg, arg);
                     } else if (transactionListener != null) {
@@ -1343,7 +1364,7 @@ public class DefaultMQProducerImpl implements MQProducerInner {
 
     /**
      * 默认消息发送
-     *
+     * <p>
      * DEFAULT SYNC -------------------------------------------------------
      */
     public SendResult send(
@@ -1351,6 +1372,17 @@ public class DefaultMQProducerImpl implements MQProducerInner {
         return send(msg, this.defaultMQProducer.getSendMsgTimeout());
     }
 
+    /**
+     * 结束事务，提交或者回滚事务
+     *
+     * @param sendResult            half消息发送结果
+     * @param localTransactionState 本地事务执行结果
+     * @param localException        异常
+     * @throws RemotingException
+     * @throws MQBrokerException
+     * @throws InterruptedException
+     * @throws UnknownHostException
+     */
     public void endTransaction(
             final SendResult sendResult,
             final LocalTransactionState localTransactionState,
@@ -1361,10 +1393,25 @@ public class DefaultMQProducerImpl implements MQProducerInner {
         } else {
             id = MessageDecoder.decodeMessageId(sendResult.getMsgId());
         }
+        /**
+         * 事务消息的事务id
+         */
         String transactionId = sendResult.getTransactionId();
+        /**
+         * 和half消息发送给同一个Broker
+         */
         final String brokerAddr = this.mQClientFactory.findBrokerAddressInPublish(sendResult.getMessageQueue().getBrokerName());
+        /**
+         * 创建事务消息
+         */
         EndTransactionRequestHeader requestHeader = new EndTransactionRequestHeader();
+        /**
+         * 设置事务id
+         */
         requestHeader.setTransactionId(transactionId);
+        /**
+         * 设置half消息偏移量
+         */
         requestHeader.setCommitLogOffset(id.getOffset());
         switch (localTransactionState) {
             case COMMIT_MESSAGE:
@@ -1384,6 +1431,9 @@ public class DefaultMQProducerImpl implements MQProducerInner {
         requestHeader.setTranStateTableOffset(sendResult.getQueueOffset());
         requestHeader.setMsgId(sendResult.getMsgId());
         String remark = localException != null ? ("executeLocalTransactionBranch exception: " + localException.toString()) : null;
+        /**
+         * 以oneway方式发送RPC给Broker
+         */
         this.mQClientFactory.getMQClientAPIImpl().endTransactionOneway(brokerAddr, requestHeader, remark,
                 this.defaultMQProducer.getSendMsgTimeout());
     }

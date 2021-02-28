@@ -214,7 +214,7 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
 
     /**
      * 执行消息拉取
-     * @param pullRequest
+     * @param pullRequest 每个队列的拉取请求
      */
     public void pullMessage(final PullRequest pullRequest) {
         final ProcessQueue processQueue = pullRequest.getProcessQueue();

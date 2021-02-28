@@ -466,6 +466,12 @@ public class MappedFileQueue {
         return deleteCount;
     }
 
+    /**
+     * 刷盘
+     *
+     * @param flushLeastPages 刷盘业务
+     * @return true
+     */
     public boolean flush(final int flushLeastPages) {
         boolean result = true;
         MappedFile mappedFile = this.findMappedFileByOffset(this.flushedWhere, this.flushedWhere == 0);
@@ -483,6 +489,12 @@ public class MappedFileQueue {
         return result;
     }
 
+    /**
+     * 提交直接内存数据到page cache
+     *
+     * @param commitLeastPages 提交的业务
+     * @return true
+     */
     public boolean commit(final int commitLeastPages) {
         boolean result = true;
         MappedFile mappedFile = this.findMappedFileByOffset(this.committedWhere, this.committedWhere == 0);
